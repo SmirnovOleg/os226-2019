@@ -4,4 +4,4 @@
 
 #make
 
-cmpout test/1 # FIXME add executable here
+cmpout test/1 ./main.sh
