@@ -1,3 +1,4 @@
 # editors
 /tags
 .vscode/
+*.so
