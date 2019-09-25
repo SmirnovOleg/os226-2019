@@ -5,6 +5,7 @@
 1. [example](./example)
 1. [syscall](./syscall)
 1. [malloc](./malloc)
+1. [coppolicy](./coppolicy)
 
 ## Как сдавать
 

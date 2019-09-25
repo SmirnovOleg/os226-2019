@@ -11,63 +11,80 @@
 
 #include "init.h"
 
-int global_calls_counter = 0;
+static int g_ncalls;
+static void *g_base;
 
-/**
- * Handler for segfault signal
- * 
- * That solution works only if array index is less than 256 
- * (can be stored in one byte). Full solution is much more
- * complicated, because it should consider how many bytes 
- * that index occupies.
- */
-void handler(int sig, siginfo_t *info, void *ctx)
-{
-	// Get current context
-	ucontext_t *uc = (ucontext_t *)ctx;
-
-	// Extract next command from RIP
-	uint64_t command = *(uint64_t *)uc->uc_mcontext.gregs[REG_RIP];
-	// Extract offset from b4 to b0
-	uint64_t base_offset = ((uint64_t)uc->uc_mcontext.gregs[REG_RBP] -
-							(uint64_t)uc->uc_mcontext.gregs[REG_RBX]) >> 2;
-
-	// Parse next command
-	uint8_t flag_byte = command & 0xff;
-	if (flag_byte != 0x8b)
-		return;
-	uint8_t info_byte = (command >> 8) & 0xff;
-
-	// Extract required bits
-	char has_offset_bit = (info_byte >> 6) & 1;
-	char is_second_arg_bit = (info_byte >> 3) & 1;
-	char is_b0_bit = (info_byte >> 1) & 1;
- 
-	// If our value is the second argument in printf(),
-	// register to place output data should be changed
-	#define OUTPUT_REG (is_second_arg_bit ? REG_RCX : REG_RDX)
-	// Extract array index
-	uint64_t index = has_offset_bit ? ((command >> 16) & 0xff) >> 2 : 0;
-	// Increase index by base_offset if b4 called instead b0
-	index += is_b0_bit ? 0 : base_offset;
-
-	uc->uc_mcontext.gregs[OUTPUT_REG] = 100000 + 1000 * index + (++global_calls_counter);
-	// Change RIP for correct continuation
-	uc->uc_mcontext.gregs[REG_RIP] += 2 + has_offset_bit;
+unsigned f(unsigned val, int h, int l) {
+	return (val & ((1ul << (h + 1)) - 1)) >> l;
 }
 
-void init(void *base)
-{
-	struct sigaction act;
+int enc2reg(unsigned enc) {
+	switch(enc) {
+	case 0: return REG_RAX;
+	case 1: return REG_RCX;
+	case 2: return REG_RDX;
+	case 3: return REG_RBX;
+	case 4: return REG_RSP;
+	case 5: return REG_RBP;
+	case 6: return REG_RSI;
+	case 7: return REG_RDI;
+	default: break;
+	}
+	abort();
+}
 
-	act.sa_sigaction = handler,
-	act.sa_flags = SA_RESTART,
+void sighnd(int sig, siginfo_t *info, void *ctx) {
+	ucontext_t *uc = (ucontext_t *) ctx;
+	greg_t *regs = uc->uc_mcontext.gregs;
 
+	uint8_t *ins = (uint8_t *)regs[REG_RIP];
+	if (ins[0] != 0x8b) {
+		abort();
+	}
+
+	uint8_t *next = &ins[2];
+
+	int dst = enc2reg(f(ins[1], 5, 3));
+
+	int rm = f(ins[1], 3, 0);
+	if (rm == 4) {
+		abort();
+	}
+	int base = enc2reg(rm);
+
+	int off = 0;
+	switch(f(ins[1], 7, 6)) {
+	case 0:
+		break;
+	case 1:
+		off = *(int8_t*)next;
+		next += 1;
+		break;
+	case 2:
+		off = *(uint32_t *)&next;
+		next += 4;
+		break;
+	default:
+		break;
+	}
+
+	regs[dst] = 100000 +
+		1000 * (regs[base] - (unsigned long)g_base + off) / 4 +
+		(++g_ncalls);
+	regs[REG_RIP] = (unsigned long)next;
+}
+
+void init(void *base) {
+	struct sigaction act = {
+		.sa_sigaction = sighnd,
+		.sa_flags = SA_RESTART,
+	};
 	sigemptyset(&act.sa_mask);
 
-	if (-1 == sigaction(SIGSEGV, &act, NULL))
-	{
+	if (-1 == sigaction(SIGSEGV, &act, NULL)) {
 		perror("signal set failed");
 		exit(1);
 	}
+
+	g_base = base;
 }

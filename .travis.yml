@@ -5,6 +5,8 @@ env:
   matrix:
     - TASK=example
     - TASK=syscall
+    - TASK=malloc
+    - TASK=copolicy
 
 script :
   - ( cd $TASK; ./test/run.sh )

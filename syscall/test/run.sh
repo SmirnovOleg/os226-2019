@@ -2,7 +2,8 @@
 
 . ../test/lib.sh
 
-make
+make || exit 1
+
 objdump -d main.o | grep 'mov\s*\(0x[0-9a-f]*\)\?('
 SLOG=$(mktemp)
 
