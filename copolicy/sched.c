@@ -60,30 +60,30 @@ _Bool cmp(sched_task *t1, sched_task* t2) {
 	}
 }
 
-void insert(sched_task **node, sched_task **head) {
-	if (*head == NULL) {
-		*head = *node;
-		(*head)->next = NULL;
+void insert(sched_task *node) {
+	if (head_of_queue == NULL) {
+		head_of_queue = node;
+		head_of_queue->next = NULL;
 		return;
 	}
-	(*node)->next = NULL;
-	sched_task *prev = *head;
+	node->next = NULL;
+	sched_task *prev = head_of_queue;
 	_Bool was_inserted = 0;
-	for (sched_task *current = *head; current != NULL; current = current->next) {
+	for (sched_task *current = head_of_queue; current != NULL; current = current->next) {
 		//printf("cur %d", current->aspace->id);
-		if (cmp(*node, current)) {
-			(*node)->next = current;
-			if (prev == *head)
-				*head = *node;
+		if (cmp(node, current)) {
+			node->next = current;
+			if (prev == head_of_queue)
+				head_of_queue = node;
 			else
-				prev->next = *node;
+				prev->next = node;
 			was_inserted = 1;
 			break;
 		}
 		prev = current;
 	}
 	if (!was_inserted)
-		prev->next = *node;
+		prev->next = node;
 }
 
 void sched_new(void (*entrypoint)(void *aspace),
@@ -98,8 +98,7 @@ void sched_new(void (*entrypoint)(void *aspace),
 	sched_dict[task_id].endlock_time = 0;
 	// Push to the "priority queue" with tasks which are ready to work
 	sched_task *node = &sched_dict[task_id];
-	insert(&node, &head_of_queue);
-	//printf("insert %p\n", head_of_queue);
+	insert(node);
 }
 
 void sched_cont(void (*entrypoint)(void *aspace),
@@ -109,8 +108,7 @@ void sched_cont(void (*entrypoint)(void *aspace),
 	sched_dict[task_id].endlock_time = time + timeout;
 	// Push to the timeout "priority queue"
 	sched_task *node = &sched_dict[task_id];
-	insert(&node, &head_of_queue);
-	//printf("timeout head %d\n\n", head_of_queue->aspace->id);
+	insert(node);
 }
 
 void sched_time_elapsed(unsigned amount) {
@@ -132,12 +130,6 @@ void sched_set_policy(const char *name) {
 
 void sched_run(void) {
 	while (head_of_queue != NULL) {
-
-for (sched_task *current = head_of_queue; current != NULL; current = current->next) {
-			printf("%d ", current->aspace->id);
-		}
-		printf("\n");
-
 		sched_task *optimal = NULL;
 		if (head_of_queue->endlock_time <= time) {
 			optimal = head_of_queue;
@@ -146,33 +138,7 @@ for (sched_task *current = head_of_queue; current != NULL; current = current->ne
 		else {
 			time++;
 			continue;
-		}
-		/*sched_task *prev = head_of_queue;
-		// Find appropriate task in timeout queue
-		for (sched_task *current = head_of_queue; current != NULL; current = current->next) {
-			if (current->endlock_time <= time) {
-				if (prev == head_of_queue)
-					head_of_queue = current->next;
-				else
-					prev->next = current->next;
-				optimal = current;
-				break;
-			}
-			prev = current;
-		}
-		if (optimal == NULL) {
-			// If not, get head of main queue
-			if (head_of_queue != NULL) {
-				optimal = head_of_queue;
-				head_of_queue = head_of_queue->next;
-			}
-			// Otherwise, wait 1s anc continue
-			else {
-				time++;
-				continue;
-			}
-		}*/
-		
+		}		
 		// Run the task
 		void (*run_app)(void *) = optimal->entrypoint;
         run_app(optimal->aspace);
