@@ -23,6 +23,19 @@ void app1(void *aspace) {
 	}
 }
 
+void rtapp(void *aspace) {
+	struct app1_aspace *as = aspace;
+	--as->cnt;
+	printf("%s id %d cnt %d\n", __func__, as->id, as->cnt);
+
+	sched_time_elapsed(1);
+
+	if (0 < as->cnt) {
+		sched_cont(rtapp, aspace, 0);
+	}
+}
+
+
 int main(int argc, char *argv[]) {
 	char name[64];
 	int prio;
@@ -35,13 +48,20 @@ int main(int argc, char *argv[]) {
 	sched_set_policy(name);
 
 	while (EOF != scanf("%s %d %d", name, &prio, &deadline)) {
-		if (!strcmp(name, "app1")) {
-			struct app1_aspace *as = &a1as[a1as_n++];
-			scanf("%d", &as->cnt);
-			as->id = as - a1as;
-			sched_new(app1, as, prio, deadline);
+		struct app1_aspace *as = &a1as[a1as_n++];
+		scanf("%d", &as->cnt);
+		as->id = as - a1as;
+		void (*entry)(void*);
 
+		if (!strcmp("app1", name)) {
+			entry = app1;
+		} else if (!strcmp("rtapp", name)) {
+			entry = rtapp;
+		} else {
+			fprintf(stderr, "Unknown app: %s\n", name);
+			return 1;
 		}
+		sched_new(entry, as, prio, deadline);
 	}
 
 	sched_run();

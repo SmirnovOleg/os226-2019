@@ -1,4 +1,5 @@
 #include <string.h>
+#include <limits.h>
 #include "sched.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -80,6 +81,42 @@ void insert(sched_task *node) {
 		prev->next = node;
 }
 
+#define ARRAY_SIZE(a) (sizeof(a) / sizeof(*a))
+
+struct task {
+	void (*entry)(void *as);
+	void *as;
+	int priority;
+	int deadline;
+
+	// timeout support
+	int waketime;
+
+	// policy support
+	struct task *next;
+};
+
+static int time;
+
+static struct task *current;
+static struct task *runq;
+static struct task *waitq;
+
+static int (*policy_cmp)(struct task *t1, struct task *t2);
+
+static struct task taskpool[16];
+static int taskpool_n;
+
+static void policy_run(struct task *t) {
+	struct task **c = &runq;
+
+	while (*c && policy_cmp(*c, t) <= 0) {
+		c = &(*c)->next;
+	}
+	t->next = *c;
+	*c = t;
+}
+
 void sched_new(void (*entrypoint)(void *aspace),
 		void *aspace,
 	       	int priority,
@@ -104,6 +141,7 @@ void sched_cont(void (*entrypoint)(void *aspace),
 	sched_dict[task_id].endlock_time = time + timeout;
 	sched_task *node = &sched_dict[task_id];
 	insert(node);
+
 }
 
 void sched_time_elapsed(unsigned amount) {
@@ -140,4 +178,3 @@ void sched_run(void) {
         run_app(optimal->aspace);
 	}
 }
-

@@ -8,14 +8,22 @@ cmpout() {
 	"$@" < $base.in | diff -u $base.out -
 }
 
-testouts() {
+testsdo() {
 	local base=$1
-	shift 1
+	local cmp=$2
+	shift 2
 
 	local ret=0
 	for i in $base/*.in; do
-		cmpout ${i%%.in} "$@" || ret=1
+		$cmp ${i%%.in} "$@" || ret=1
 	done
 
 	return $ret
+}
+
+testouts() {
+	local base=$1
+	shift
+
+	testsdo $base cmpout "$@"
 }
