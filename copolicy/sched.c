@@ -10,17 +10,12 @@ enum policy_type
     DEADLINE
 } policy;
 
-typedef struct TASK_INFO {
-	int id;
-	int cnt;
-} task_info;
-
 typedef struct SCHEDULE_TASK {
 	void (*entrypoint)(void *aspace);
-	task_info *aspace;
+	int id;
+	void *aspace;
 	int priority;
 	int deadline;
-
 	int endlock_time;
 	struct SCHEDULE_TASK *next;
 } sched_task;
@@ -28,32 +23,32 @@ typedef struct SCHEDULE_TASK {
 sched_task *head_of_queue = NULL;
 sched_task sched_dict[100];
 int time = 0;
+int id_counter = 0;
+int current_id = -1;
 
 // Return 1, if task1 is more preferable then task2, and 0 otherwise
 // deadline > timeout > priority > id
 _Bool cmp(sched_task *t1, sched_task* t2) {
 	switch (policy) {
 	case FIFO:
-		return t1->aspace->id < t2->aspace->id;
+		return t1->id < t2->id;
 	case PRIORITY:
 		if (t1->priority < t2->priority)
 			return 1;
 		if (t1->priority == t2->priority)
-			return t1->aspace->id < t2->aspace->id;
+			return t1->id < t2->id;
 		return 0;
 	case DEADLINE:
-		if (t1->deadline == -1 && t2->deadline != -1) 
-			return 0;
-		if (t1->deadline < t2->deadline || t1->deadline != -1 && t2->deadline == -1)
+		if (t1->deadline < t2->deadline)
 			return 1;
-		if (t1->deadline == t1->deadline) {
+		if (t1->deadline == t2->deadline) {
 			if (t1->endlock_time < t2->endlock_time)
 				return 1;
 			if (t1->endlock_time == t2->endlock_time) {
 				if (t1->priority < t2->priority)
 					return 1;
 				if (t1->priority == t2->priority)
-					return t1->aspace->id < t2->aspace->id;
+					return t1->id < t2->id;
 			}
 		}
 		return 0;
@@ -70,7 +65,6 @@ void insert(sched_task *node) {
 	sched_task *prev = head_of_queue;
 	_Bool was_inserted = 0;
 	for (sched_task *current = head_of_queue; current != NULL; current = current->next) {
-		//printf("cur %d", current->aspace->id);
 		if (cmp(node, current)) {
 			node->next = current;
 			if (prev == head_of_queue)
@@ -90,13 +84,13 @@ void sched_new(void (*entrypoint)(void *aspace),
 		void *aspace,
 	       	int priority,
 		int deadline) {
-	int task_id = ((task_info *) aspace)->id;
-	sched_dict[task_id].aspace = (task_info *) aspace;
+	int task_id = id_counter++;
+	sched_dict[task_id].id = task_id;
+	sched_dict[task_id].aspace = aspace;
 	sched_dict[task_id].entrypoint = entrypoint;
 	sched_dict[task_id].priority = priority;
-	sched_dict[task_id].deadline = deadline;
+	sched_dict[task_id].deadline = (deadline == -1) ? __INT32_MAX__ : deadline;
 	sched_dict[task_id].endlock_time = 0;
-	// Push to the "priority queue" with tasks which are ready to work
 	sched_task *node = &sched_dict[task_id];
 	insert(node);
 }
@@ -104,9 +98,10 @@ void sched_new(void (*entrypoint)(void *aspace),
 void sched_cont(void (*entrypoint)(void *aspace),
 		void *aspace,
 		int timeout) {
-	int task_id = ((task_info *) aspace)->id;
+	if (current_id == -1) exit(1);
+	int task_id = current_id;
+	current_id = -1;
 	sched_dict[task_id].endlock_time = time + timeout;
-	// Push to the timeout "priority queue"
 	sched_task *node = &sched_dict[task_id];
 	insert(node);
 }
@@ -133,10 +128,11 @@ void sched_run(void) {
 		sched_task *optimal = NULL;
 		if (head_of_queue->endlock_time <= time) {
 			optimal = head_of_queue;
+			current_id = optimal->id;
 			head_of_queue = head_of_queue->next;
 		}
 		else {
-			time++;
+			sched_time_elapsed(1);
 			continue;
 		}		
 		// Run the task
