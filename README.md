@@ -7,6 +7,7 @@
 1. [malloc](./malloc)
 1. [coppolicy](./coppolicy)
 1. [cotimer](./cotimer)
+1. [preempt](./preempt)
 
 ## Как сдавать
 

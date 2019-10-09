@@ -8,6 +8,7 @@ env:
     #- TASK=malloc
     - TASK=copolicy
     - TASK=cotimer
+    - TASK=preempt
 
 script :
   - ( cd $TASK; ./test/run.sh )
