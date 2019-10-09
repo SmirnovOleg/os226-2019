@@ -52,7 +52,7 @@ int main(int argc, char *argv[]) {
 		if (!strcmp("app1", name)) {
 			int sleep;
 			int busy;
-			scanf("%d %d", &period, &busy);
+			scanf("%d %d", &sleep, &busy);
 
 			struct app1_aspace *as = ALLOC(a1pool, a1next);
 			as->id = as - a1pool;
