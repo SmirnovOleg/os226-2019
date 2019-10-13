@@ -52,11 +52,11 @@ struct aireg_space {
 };
 void aireg(void *aspace) {
 	struct aireg_space *as = aspace;
-	printf("%s id %d cnt %d time1 %d reference %lld\n", __func__, as->id, sched_gettime(), reftime());
+	printf("%s id %d time1 %d reference %lld\n", __func__, as->id, sched_gettime(), reftime());
 
 	sched_sleep(as->work->duration);
 
-	printf("%s id %d cnt %d time2 %d reference %lld\n", __func__, as->id, sched_gettime(), reftime());
+	printf("%s id %d time2 %d reference %lld\n", __func__, as->id, sched_gettime(), reftime());
 
 	if (0 <= as->work->delay_cont) {
 		sched_cont(app1, aspace, as->work->delay_cont);
@@ -105,13 +105,13 @@ int main(int argc, char *argv[]) {
 				scanf("%d %d", &w->duration, &w->delay_cont);
 			} while (w->delay_cont != -1);
 
-			sched_new(app1, as, prio);
+			sched_new(aireg, as, prio);
 		} else {
 			fprintf(stderr, "Unknown app: %s\n", name);
 			return 1;
 		}
 	}
 
-	sched_run(100);
+	sched_run(10);
 	return 0;
 }
