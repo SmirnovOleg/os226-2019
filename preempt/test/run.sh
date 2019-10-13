@@ -11,12 +11,8 @@ check() {
 	echo ${base}:
 
 	awk '!/^#/' $base.in | \
-	timeout 60 "$@" | \
-		awk '
-			$1 == "reftime" { t = $2 ; next }
-			$(NF - 1) == "reference" { $NF = $NF - t ; print ; next }
-			{ print }
-		'
+		timeout 10 "$@"
+	[ $? == 124 ]
 }
 
 testsdo test check ./main

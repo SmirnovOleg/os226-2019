@@ -19,6 +19,7 @@ struct app1_aspace {
 	int id;
 	int sleep;
 	int busy;
+	int start;
 };
 
 static long long reftime(void) {
@@ -27,14 +28,21 @@ static long long reftime(void) {
 	return ts.tv_sec * 1000 + ts.tv_nsec / 1000000;
 }
 
+static void print(struct app1_aspace *as, const char *msg) {
+	printf("app1 id %d %s time %d reference %lld\n", as->id, msg, sched_gettime(), reftime() - as->start);
+}
+
 void app1(void *aspace) {
 	struct app1_aspace *as = aspace;
+	as->start = reftime();
+
 	while (true)  {
-		printf("%s id %d sleep reference %lld\n", __func__, as->id, reftime());
+		print(as, "sleep");
 		sched_sleep(as->sleep);
-		printf("%s id %d busy reference %lld\n", __func__, as->id, reftime());
+		print(as, "busy1");
 		for (volatile int i = 100000 * as->busy; 0 < i; --i) {
 		}
+		print(as, "busy2");
 	}
 }
 
