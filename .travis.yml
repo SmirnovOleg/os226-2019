@@ -9,6 +9,7 @@ env:
     - TASK=copolicy
     - TASK=cotimer
     - TASK=preempt
+    - TASK=sem
 
 script :
   - ( cd $TASK; ./test/run.sh )
