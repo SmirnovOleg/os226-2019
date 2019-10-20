@@ -48,6 +48,8 @@ void app1(void *aspace) {
 		--incnt;
 		sched_rel(as->mid);
 
+		sched_sleep(random() % 1000);
+
 		sched_acq(as->mid);
 		++incnt;
 		for (volatile int i = 100000 * (random() % 1000); 0 < i; --i) {

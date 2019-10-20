@@ -32,6 +32,11 @@ struct task {
 	struct task *next;
 };
 
+struct mutex {
+	struct task *next;
+	bool busy;
+};
+
 static volatile int time;
 static int tick_period;
 
@@ -45,6 +50,9 @@ static struct task taskpool[16];
 static int taskpool_n;
 
 static sigset_t irqs;
+
+static struct mutex mutexpool[16];
+static int mutexpool_n;
 
 static void irq_disable(void) {
 	sigprocmask(SIG_BLOCK, &irqs, NULL);
@@ -179,13 +187,43 @@ int sched_gettime(void) {
 }
 
 int sched_get_mutex(void) {
-	return 0;
+	if (ARRAY_SIZE(mutexpool) <= mutexpool_n) {
+		fprintf(stderr, "No mem for new mutex\n");
+		return -1;
+	}
+	return mutexpool_n++;
 }
 
 void sched_acq(int mid) {
+	irq_disable();
+	struct mutex *m = mutexpool + mid;
+	while (m->busy) {
+		current->next = m->next;
+		m->next = current;
+		doswitch();
+	}
+	m->busy = true;
+	irq_enable();
 }
 
 void sched_rel(int mid) {
+	irq_disable();
+	struct mutex *m = mutexpool + mid;
+	m->busy = false;
+
+	bool sw = false;
+	struct task *c;
+	while ((c = m->next)) {
+		m->next = c->next;
+		policy_run(c);
+		if (prio_cmp(c, current) < 0) {
+			sw = true;
+		}
+	}
+	if (sw) {
+		doswitch();
+	}
+	irq_enable();
 }
 
 void sched_run(int period_ms) {
