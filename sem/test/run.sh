@@ -11,10 +11,12 @@ check() {
 	echo ${base}:
 
 	awk '!/^#/' $base.in | \
-		timeout 5 "$@" 2>&1 | awk '
+		timeout 60 "$@" 2>&1 | awk '
 			$5 != 1 { e = 1}
 			{ print }
 			END { exit e }'
+
+	[  ${PIPESTATUS[1]} = 124 ] && [ ${PIPESTATUS[2]} = 0 ]
 }
 
 testsdo test check ./main
