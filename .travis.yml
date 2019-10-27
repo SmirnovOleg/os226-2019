@@ -12,5 +12,8 @@ env:
     - TASK=sem
     - TASK=fuse
 
+before_script:
+  - sudo apt-get install libfuse-dev
+
 script :
   - ( cd $TASK; ./test/run.sh )
