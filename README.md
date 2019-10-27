@@ -8,6 +8,8 @@
 1. [coppolicy](./coppolicy)
 1. [cotimer](./cotimer)
 1. [preempt](./preempt)
+1. [sem](./sem)
+1. [fuse](./fuse)
 
 ## Как сдавать
 

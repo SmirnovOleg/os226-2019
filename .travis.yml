@@ -10,6 +10,7 @@ env:
     - TASK=cotimer
     - TASK=preempt
     - TASK=sem
+    - TASK=fuse
 
 script :
   - ( cd $TASK; ./test/run.sh )
