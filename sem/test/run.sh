@@ -16,7 +16,8 @@ check() {
 			{ print }
 			END { exit e }'
 
-	[  ${PIPESTATUS[1]} = 124 ] && [ ${PIPESTATUS[2]} = 0 ]
+	S=(${PIPESTATUS[@]})
+	[ ${S[1]} = 124 ] && [ ${S[2]} = 0 ]
 }
 
 testsdo test check ./main

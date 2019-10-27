@@ -1,11 +1,11 @@
 
-set -o pipefail
-
 cmpout() {
 	local base=$1
 	shift 1
 
 	"$@" < $base.in | diff -u $base.out -
+	S=(${PIPESTATUS[@]})
+	[ ${S[0]} = 0 ] && [ ${S[1]} = 0 ]
 }
 
 testsdo() {
